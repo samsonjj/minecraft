@@ -17,22 +17,42 @@ public class Chunk: MonoBehaviour
 
     static int SEA_LEVEL = 64;
 
+    // refs to neighbor chunks, used for reducing the mesh
+    // can be null, in which case this chunk is on the edge of the map
+    // if the chunk is on the edge, don't add that edge to the mesh
+    public Chunk northChunk;
+    public Chunk southChunk;
+    public Chunk westChunk;
+    public Chunk eastChunk;
+
     // chunk offset x
     public int cox;
     // chunk offset z
     public int coz;
 
-    // stored x,z,y
+    // stored x,y,z
     BlockType[,,] blocks;
+
+    public Chunk(int cox, int coz): this(cox, coz, null, null, null, null) { }
+
+    public Chunk(int cox, int coz, Chunk n, Chunk s, Chunk w, Chunk e)
+    {
+        this.cox = cox;
+        this.coz = coz;
+        this.northChunk = n;
+        this.southChunk = s;
+        this.westChunk = w;
+        this.eastChunk = e;
+    }
 
     // Start is called before the first frame update
     void Start()
     {
-        blocks = new BlockType[WIDTH, WIDTH, HEIGHT];
+        blocks = new BlockType[WIDTH, HEIGHT, WIDTH];
         for (int x = 0; x < WIDTH; x++)
             for (int z = 0; z < WIDTH; z++)
                 for (int y = 0; y < HEIGHT; y++)
-                    blocks[x,z,y] = BlockType.None;
+                    blocks[x,y,z] = BlockType.None;
 
         for (int x = 0; x < WIDTH; x++)
         {
@@ -42,9 +62,9 @@ public class Chunk: MonoBehaviour
                 Debug.Log(top_block);
                 Debug.Log(blocks.Length);
                 Debug.Log(x + z * WIDTH + top_block * WIDTH * WIDTH);
-                // blocks[x,z,0] = BlockType.Dirt;
+                // blocks[x,0,z] = BlockType.Dirt;
                 for (int y = top_block; y >= 0; y--) {
-                    blocks[x,z,y] = BlockType.Dirt;
+                    blocks[x,y,z] = BlockType.Dirt;
                 }
             }
         }
@@ -72,14 +92,13 @@ public class Chunk: MonoBehaviour
             {
                 for (int y = 0; y < HEIGHT; y++)
                 {
-                    if (blocks[x, z, y] == BlockType.None) continue;
-                    if (blocks[x, z, y] == BlockType.Test) continue;
+                    if (blocks[x, y, z] == BlockType.None) continue;
+                    if (blocks[x, y, z] == BlockType.Test) continue;
                     // top
-                    if (y == HEIGHT-1 || blocks[x, z, y+1] == BlockType.None)
+                    if (y == HEIGHT-1 || blocks[x, y+1, z] == BlockType.None)
                     {
                         int vi = vertices.Count;
 
-                        // top
                         vertices.Add(new Vector3(cox + x, 1 + y, coz + z));
                         vertices.Add(new Vector3(cox + x + 1, 1 + y, coz + z));
                         vertices.Add(new Vector3(cox + x, 1 + y, coz + 1 + z));
@@ -87,10 +106,10 @@ public class Chunk: MonoBehaviour
 
                         triangles.AddRange(new int[] { vi, vi + 2, vi + 1, vi + 1, vi + 2, vi + 3 });
                     }
-                    if (y == 0 || blocks[x, z, y-1] == BlockType.None) {
+                    // bottom
+                    if (y == 0 || blocks[x, y-1, z] == BlockType.None) {
                         int vi = vertices.Count;
 
-                        // bottom
                         vertices.Add(new Vector3(cox + x, 0 + y, coz + z));
                         vertices.Add(new Vector3(cox + x + 1, 0 + y, coz + z));
                         vertices.Add(new Vector3(cox + x, 0 + y, coz + z + 1));
@@ -98,9 +117,8 @@ public class Chunk: MonoBehaviour
 
                         triangles.AddRange(new int[] { vi, vi + 1, vi + 2, vi + 1, vi + 3, vi + 2 });
                     }
-                    if (z == 0 || blocks[x,z-1,y] == BlockType.None) {
-                        // sides
-                        // front
+                    // front
+                    if (z == 0 || blocks[x,y,z-1] == BlockType.None) {
                         int vi = vertices.Count;
 
                         vertices.Add(new Vector3(cox + x, 0 + y, coz + z));
@@ -110,9 +128,9 @@ public class Chunk: MonoBehaviour
 
                         triangles.AddRange(new int[] { vi, vi + 2, vi + 1, vi + 1, vi + 2, vi + 3 });
                     }
-                    if (z == WIDTH-1 || blocks[x,z+1,y] == BlockType.None)
+                    // back
+                    if (z == WIDTH-1 || blocks[x,y, z+1] == BlockType.None)
                     {
-                        // back
                         int vi = vertices.Count;
 
                         vertices.Add(new Vector3(cox + x, 0 + y, coz + z + 1));
@@ -122,9 +140,9 @@ public class Chunk: MonoBehaviour
 
                         triangles.AddRange(new int[] { vi, vi + 1, vi + 2, vi + 1, vi + 3, vi + 2 });
                     }
-                    if (x == 0 || blocks[x-1, z, y] == BlockType.None)
+                    // left
+                    if (x == 0 || blocks[x-1, y, z] == BlockType.None)
                     {
-                        // left
                         int vi = vertices.Count;
 
                         vertices.Add(new Vector3(cox + x, 0 + y, coz + z));
@@ -134,8 +152,8 @@ public class Chunk: MonoBehaviour
 
                         triangles.AddRange(new int[] { vi, vi + 1, vi + 2, vi + 1, vi + 3, vi + 2 });
                     }
-                    if (x == WIDTH-1 || blocks[x+1,z,y] == BlockType.None) {
-                        // right
+                    // right
+                    if (x == WIDTH-1 || blocks[x+1,y,z] == BlockType.None) {
                         int vi = vertices.Count;
 
                         vertices.Add(new Vector3(cox + x + 1, 0 + y, coz + z));
